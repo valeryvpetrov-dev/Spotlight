@@ -4,6 +4,8 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.TimeInterpolator
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.animation.DecelerateInterpolator
@@ -138,7 +140,7 @@ class Spotlight private constructor(
    * Builder to build [Spotlight].
    * All parameters should be set in this [Builder].
    */
-  class Builder(private val activity: Activity) {
+  class Builder(private val context: Context) {
 
     private var targets: Array<Target>? = null
     private var duration: Long = DEFAULT_DURATION
@@ -174,7 +176,7 @@ class Spotlight private constructor(
      * Sets [backgroundColor] resource on [Spotlight].
      */
     fun setBackgroundColorRes(@ColorRes backgroundColorRes: Int): Builder = apply {
-      this.backgroundColor = ContextCompat.getColor(activity, backgroundColorRes)
+      this.backgroundColor = ContextCompat.getColor(context, backgroundColorRes)
     }
 
     /**
@@ -207,9 +209,9 @@ class Spotlight private constructor(
 
     fun build(): Spotlight {
 
-      val spotlight = SpotlightView(activity, null, 0, backgroundColor)
+      val spotlight = SpotlightView(context, null, 0, backgroundColor)
       val targets = requireNotNull(targets) { "targets should not be null. " }
-      val container = container ?: activity.window.decorView as ViewGroup
+      val container = container ?: tryGetActivity(context)!!.window.decorView as ViewGroup
 
       return Spotlight(
           spotlight = spotlight,
@@ -228,6 +230,18 @@ class Spotlight private constructor(
       private val DEFAULT_ANIMATION = DecelerateInterpolator(2f)
 
       @ColorInt private val DEFAULT_OVERLAY_COLOR: Int = 0x6000000
+
+      private fun tryGetActivity(context: Context): Activity? {
+        var ctx = context
+        while (ctx is ContextWrapper) {
+          if (ctx is Activity) {
+            return ctx
+          }
+
+          ctx = ctx.baseContext
+        }
+        return null
+      }
     }
   }
 }
