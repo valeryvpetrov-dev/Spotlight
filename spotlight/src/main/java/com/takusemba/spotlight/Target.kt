@@ -11,12 +11,15 @@ import com.takusemba.spotlight.shape.Shape
  * Target represents the spot that Spotlight will cast.
  */
 class Target(
-    val anchor: PointF,
+    private val deferredAnchor: DeferredAnchor,
     val shape: Shape,
     val effect: Effect,
     val overlay: View?,
     val listener: OnTargetListener?
 ) {
+
+  val anchor: PointF
+    get() = deferredAnchor.invoke()
 
   /**
    * Checks if point on edge or inside of the Shape.
@@ -32,7 +35,7 @@ class Target(
    */
   class Builder {
 
-    private var anchor: PointF = DEFAULT_ANCHOR
+    private var anchor: DeferredAnchor = { DEFAULT_ANCHOR }
     private var shape: Shape = DEFAULT_SHAPE
     private var effect: Effect = DEFAULT_EFFECT
     private var overlay: View? = null
@@ -42,11 +45,13 @@ class Target(
      * Sets a pointer to start a [Target].
      */
     fun setAnchor(view: View): Builder = apply {
-      val location = IntArray(2)
-      view.getLocationInWindow(location)
-      val x = location[0] + view.width / 2f
-      val y = location[1] + view.height / 2f
-      setAnchor(x, y)
+      anchor = {
+        val location = IntArray(2)
+        view.getLocationInWindow(location)
+        val x = location[0] + view.width / 2f
+        val y = location[1] + view.height / 2f
+        PointF(x, y)
+      }
     }
 
     /**
@@ -60,7 +65,7 @@ class Target(
      * Sets an anchor point to start [Target].
      */
     fun setAnchor(anchor: PointF): Builder = apply {
-      this.anchor = anchor
+      this.anchor = { anchor }
     }
 
     /**
@@ -92,7 +97,7 @@ class Target(
     }
 
     fun build() = Target(
-        anchor = anchor,
+        deferredAnchor = anchor,
         shape = shape,
         effect = effect,
         overlay = overlay,
@@ -109,3 +114,5 @@ class Target(
     }
   }
 }
+
+typealias DeferredAnchor = () -> PointF
