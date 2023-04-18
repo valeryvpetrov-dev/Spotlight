@@ -6,6 +6,7 @@ import android.animation.TimeInterpolator
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.animation.DecelerateInterpolator
@@ -28,12 +29,35 @@ class Spotlight private constructor(
     private val duration: Long,
     private val interpolator: TimeInterpolator,
     private val container: ViewGroup,
-    private val spotlightListener: OnSpotlightListener?
+    private val spotlightListener: OnSpotlightListener?,
+    finishOnTouchOutsideOfCurrentTarget: Boolean,
+    finishOnBackPress: Boolean
 ) {
 
   private var currentIndex = NO_POSITION
 
   init {
+    spotlightView.apply {
+      if (finishOnTouchOutsideOfCurrentTarget) {
+        setOnTouchOutsideOfCurrentTargetListener(
+            object : OnTouchOutsideOfCurrentTargetListener {
+              override fun onEvent() = finishSpotlight()
+            }
+        )
+      }
+
+      if (finishOnBackPress) {
+        isFocusable = true
+        isFocusableInTouchMode = true
+        setOnKeyListener { _, keyCode, event ->
+          if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_BACK) {
+            finishSpotlight()
+            true
+          } else false
+        }
+      }
+    }
+
     container.addView(spotlightView, MATCH_PARENT, MATCH_PARENT)
   }
 
@@ -79,6 +103,7 @@ class Spotlight private constructor(
    * Starts Spotlight.
    */
   private fun startSpotlight() {
+    spotlightView.requestFocus()
     spotlightView.startSpotlight(duration, interpolator, object : AnimatorListenerAdapter() {
       override fun onAnimationStart(animation: Animator) {
         spotlightListener?.onStarted()
@@ -152,6 +177,8 @@ class Spotlight private constructor(
     // Finish on touch outside of current target feature is disabled by default
     private var finishOnTouchOutsideOfCurrentTarget: Boolean = false
 
+    private var finishOnBackPress: Boolean = false
+
     /**
      * Sets [Target]s to show on [Spotlight].
      */
@@ -220,6 +247,10 @@ class Spotlight private constructor(
       this.finishOnTouchOutsideOfCurrentTarget = finishOnTouchOutsideOfCurrentTarget
     }
 
+    fun setFinishOnBackPress(finishOnBackPress: Boolean): Builder = apply {
+      this.finishOnBackPress = finishOnBackPress
+    }
+
     fun build(): Spotlight {
       val spotlightView = SpotlightView(context, null, 0, backgroundColor)
       val targets = requireNotNull(targets) { "targets should not be null. " }
@@ -230,16 +261,10 @@ class Spotlight private constructor(
           duration = duration,
           interpolator = interpolator,
           container = container,
-          spotlightListener = listener
-      ).apply {
-        if (this@Builder.finishOnTouchOutsideOfCurrentTarget) {
-          spotlightView.setOnTouchOutsideOfCurrentTargetListener(
-              object : OnTouchOutsideOfCurrentTargetListener {
-                override fun onEvent() = finishSpotlight()
-              }
-          )
-        }
-      }
+          spotlightListener = listener,
+          finishOnTouchOutsideOfCurrentTarget,
+          finishOnBackPress
+      )
     }
 
     companion object {

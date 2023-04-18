@@ -1,19 +1,9 @@
 package com.takusemba.spotlight
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ObjectAnimator
-import android.animation.TimeInterpolator
-import android.animation.ValueAnimator
-import android.animation.ValueAnimator.AnimatorUpdateListener
-import android.animation.ValueAnimator.INFINITE
-import android.animation.ValueAnimator.ofFloat
+import android.animation.*
+import android.animation.ValueAnimator.*
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.PointF
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
+import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -30,11 +20,6 @@ internal class SpotlightView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
     @ColorInt backgroundColor: Int,
 ) : FrameLayout(context, attrs, defStyleAttr) {
-
-  private val backgroundPaint by lazy {
-    Paint().apply { color = backgroundColor }
-  }
-
   private val shapePaint by lazy {
     Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
   }
@@ -52,11 +37,11 @@ internal class SpotlightView @JvmOverloads constructor(
   init {
     setWillNotDraw(false)
     setLayerType(View.LAYER_TYPE_HARDWARE, null)
+    setBackgroundColor(backgroundColor)
   }
 
   override fun onDraw(canvas: Canvas) {
     super.onDraw(canvas)
-    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
     val currentTarget = target
     val currentShapeAnimator = shapeAnimator
     val currentEffectAnimator = effectAnimator
