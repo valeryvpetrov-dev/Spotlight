@@ -33,8 +33,8 @@ class Spotlight private constructor(
     finishOnTouchOutsideOfCurrentTarget: Boolean,
     finishOnBackPress: Boolean
 ) {
-
-  private var currentIndex = NO_POSITION
+  var currentIndex = NO_POSITION
+    private set
 
   init {
     spotlightView.apply {
@@ -123,18 +123,18 @@ class Spotlight private constructor(
       val target = targets[index]
       currentIndex = index
       spotlightView.startTarget(target)
-      target.listener?.onStarted()
+      target.listener?.onStarted(currentIndex)
     } else {
       spotlightView.finishTarget(object : AnimatorListenerAdapter() {
         override fun onAnimationEnd(animation: Animator) {
           val previousIndex = currentIndex
           val previousTarget = targets[previousIndex]
-          previousTarget.listener?.onEnded()
+          previousTarget.listener?.onEnded(previousIndex)
           if (index < targets.size) {
             val target = targets[index]
             currentIndex = index
             spotlightView.startTarget(target)
-            target.listener?.onStarted()
+            target.listener?.onStarted(index)
           } else {
             finishSpotlight()
           }
@@ -152,13 +152,14 @@ class Spotlight private constructor(
         spotlightView.cleanup()
         container.removeView(spotlightView)
         spotlightListener?.onEnded()
+        currentIndex = NO_POSITION
       }
     })
   }
 
   companion object {
 
-    private const val NO_POSITION = -1
+    const val NO_POSITION = -1
   }
 
   /**
@@ -170,7 +171,9 @@ class Spotlight private constructor(
     private var targets: Array<Target>? = null
     private var duration: Long = DEFAULT_DURATION
     private var interpolator: TimeInterpolator = DEFAULT_ANIMATION
-    @ColorInt private var backgroundColor: Int = DEFAULT_OVERLAY_COLOR
+
+    @ColorInt
+    private var backgroundColor: Int = DEFAULT_OVERLAY_COLOR
     private var container: ViewGroup? = null
     private var listener: OnSpotlightListener? = null
 
@@ -273,7 +276,8 @@ class Spotlight private constructor(
 
       private val DEFAULT_ANIMATION = DecelerateInterpolator(2f)
 
-      @ColorInt private val DEFAULT_OVERLAY_COLOR: Int = 0x6000000
+      @ColorInt
+      private val DEFAULT_OVERLAY_COLOR: Int = 0x6000000
 
       private fun tryGetActivity(context: Context): Activity? {
         var ctx = context

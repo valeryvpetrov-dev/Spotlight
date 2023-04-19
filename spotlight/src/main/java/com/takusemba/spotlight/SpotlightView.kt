@@ -1,25 +1,38 @@
 package com.takusemba.spotlight
 
-import android.animation.*
-import android.animation.ValueAnimator.*
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
+import android.animation.TimeInterpolator
+import android.animation.ValueAnimator
+import android.animation.ValueAnimator.AnimatorUpdateListener
+import android.animation.ValueAnimator.INFINITE
+import android.animation.ValueAnimator.ofFloat
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.PointF
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.widget.FrameLayout
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.AbsoluteLayout
 import androidx.annotation.ColorInt
+import kotlin.math.roundToInt
 
 /**
  * [SpotlightView] starts/finishes [Spotlight], and starts/finishes a current [Target].
  */
+@Suppress("DEPRECATION")
 internal class SpotlightView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     @ColorInt backgroundColor: Int,
-) : FrameLayout(context, attrs, defStyleAttr) {
+) : AbsoluteLayout(context, attrs, defStyleAttr) {
   private val shapePaint by lazy {
     Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
   }
@@ -77,12 +90,14 @@ internal class SpotlightView @JvmOverloads constructor(
         // click the touchscreen.
         true
       }
+
       MotionEvent.ACTION_DOWN -> {
         val currentTarget = this.target ?: return false
         val touchPoint = PointF(event.x, event.y)
         if (!currentTarget.contains(touchPoint)) onTouchOutsideOfCurrentTargetListener?.onEvent()
         true
       }
+
       else -> false
     }
   }
@@ -103,7 +118,7 @@ internal class SpotlightView @JvmOverloads constructor(
       interpolator: TimeInterpolator,
       listener: Animator.AnimatorListener
   ) {
-    val objectAnimator = ObjectAnimator.ofFloat(this, "alpha", 0f, 1f).apply {
+    val objectAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, 0f, 1f).apply {
       setDuration(duration)
       setInterpolator(interpolator)
       addListener(listener)
@@ -119,7 +134,7 @@ internal class SpotlightView @JvmOverloads constructor(
       interpolator: TimeInterpolator,
       listener: Animator.AnimatorListener
   ) {
-    val objectAnimator = ObjectAnimator.ofFloat(this, "alpha", 1f, 0f).apply {
+    val objectAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, 1f, 0f).apply {
       setDuration(duration)
       setInterpolator(interpolator)
       addListener(listener)
@@ -131,8 +146,6 @@ internal class SpotlightView @JvmOverloads constructor(
    * Starts the provided [Target].
    */
   fun startTarget(target: Target) {
-    removeAllViews()
-    addView(target.overlay, MATCH_PARENT, MATCH_PARENT)
     this.target = target.apply {
       // adjust anchor in case where custom container is set.
       val location = IntArray(2)
@@ -140,49 +153,70 @@ internal class SpotlightView @JvmOverloads constructor(
       val offset = PointF(location[0].toFloat(), location[1].toFloat())
       anchor.offset(-offset.x, -offset.y)
     }
-    this.shapeAnimator?.removeAllListeners()
-    this.shapeAnimator?.removeAllUpdateListeners()
-    this.shapeAnimator?.cancel()
-    this.shapeAnimator = ofFloat(0f, 1f).apply {
-      duration = target.shape.duration
-      interpolator = target.shape.interpolator
-      addUpdateListener(invalidator)
-      addListener(object : AnimatorListenerAdapter() {
-        override fun onAnimationEnd(animation: Animator) {
-          removeAllListeners()
-          removeAllUpdateListeners()
-        }
 
-        override fun onAnimationCancel(animation: Animator) {
-          removeAllListeners()
-          removeAllUpdateListeners()
-        }
-      })
-    }
-    this.effectAnimator?.removeAllListeners()
-    this.effectAnimator?.removeAllUpdateListeners()
-    this.effectAnimator?.cancel()
-    this.effectAnimator = ofFloat(0f, 1f).apply {
-      startDelay = target.shape.duration
-      duration = target.effect.duration
-      interpolator = target.effect.interpolator
-      repeatMode = target.effect.repeatMode
-      repeatCount = INFINITE
-      addUpdateListener(invalidator)
-      addListener(object : AnimatorListenerAdapter() {
-        override fun onAnimationEnd(animation: Animator) {
-          removeAllListeners()
-          removeAllUpdateListeners()
-        }
+    removeAllViews()
+    val childLayoutParams = target.overlay.layoutParams?.let { source ->
+      if (source is LayoutParams) {
+        source.x = 0
+        source.y = target.anchor.y.roundToInt() + target.verticalOffset
+        source
+      } else {
+        LayoutParams(source.width, source.height, 0,
+            target.anchor.y.roundToInt() + target.verticalOffset)
+      }
+    } ?: LayoutParams(MATCH_PARENT, WRAP_CONTENT, 0,
+        target.anchor.y.roundToInt() + target.verticalOffset)
 
-        override fun onAnimationCancel(animation: Animator) {
-          removeAllListeners()
-          removeAllUpdateListeners()
-        }
-      })
-    }
-    shapeAnimator?.start()
-    effectAnimator?.start()
+    addView(target.overlay, childLayoutParams)
+
+    shapeAnimator = shapeAnimator?.apply {
+      removeAllListeners()
+      removeAllUpdateListeners()
+      cancel()
+    }.run {
+      ofFloat(0f, 1f).apply {
+        duration = target.shape.duration
+        interpolator = target.shape.interpolator
+        addUpdateListener(invalidator)
+        addListener(object : AnimatorListenerAdapter() {
+          override fun onAnimationEnd(animation: Animator) {
+            removeAllListeners()
+            removeAllUpdateListeners()
+          }
+
+          override fun onAnimationCancel(animation: Animator) {
+            removeAllListeners()
+            removeAllUpdateListeners()
+          }
+        })
+      }
+    }.also(ValueAnimator::start)
+
+    effectAnimator = effectAnimator?.apply {
+      removeAllListeners()
+      removeAllUpdateListeners()
+      cancel()
+    }.run {
+      ofFloat(0f, 1f).apply {
+        startDelay = target.shape.duration
+        duration = target.effect.duration
+        interpolator = target.effect.interpolator
+        repeatMode = target.effect.repeatMode
+        repeatCount = INFINITE
+        addUpdateListener(invalidator)
+        addListener(object : AnimatorListenerAdapter() {
+          override fun onAnimationEnd(animation: Animator) {
+            removeAllListeners()
+            removeAllUpdateListeners()
+          }
+
+          override fun onAnimationCancel(animation: Animator) {
+            removeAllListeners()
+            removeAllUpdateListeners()
+          }
+        })
+      }
+    }.also(ValueAnimator::start)
   }
 
   /**
@@ -191,42 +225,54 @@ internal class SpotlightView @JvmOverloads constructor(
   fun finishTarget(listener: Animator.AnimatorListener) {
     val currentTarget = target ?: return
     val currentAnimatedValue = shapeAnimator?.animatedValue ?: return
-    shapeAnimator?.removeAllListeners()
-    shapeAnimator?.removeAllUpdateListeners()
-    shapeAnimator?.cancel()
-    shapeAnimator = ofFloat(currentAnimatedValue as Float, 0f).apply {
-      duration = currentTarget.shape.duration
-      interpolator = currentTarget.shape.interpolator
-      addUpdateListener(invalidator)
-      addListener(listener)
-      addListener(object : AnimatorListenerAdapter() {
-        override fun onAnimationEnd(animation: Animator) {
-          removeAllListeners()
-          removeAllUpdateListeners()
-        }
 
-        override fun onAnimationCancel(animation: Animator) {
-          removeAllListeners()
-          removeAllUpdateListeners()
-        }
-      })
+    shapeAnimator = shapeAnimator?.apply {
+      removeAllListeners()
+      removeAllUpdateListeners()
+      cancel()
+    }.run {
+      ofFloat(currentAnimatedValue as Float, 0f).apply {
+        duration = currentTarget.shape.duration
+        interpolator = currentTarget.shape.interpolator
+        addUpdateListener(invalidator)
+        addListener(listener)
+        addListener(object : AnimatorListenerAdapter() {
+          override fun onAnimationEnd(animation: Animator) {
+            removeAllListeners()
+            removeAllUpdateListeners()
+          }
+
+          override fun onAnimationCancel(animation: Animator) {
+            removeAllListeners()
+            removeAllUpdateListeners()
+          }
+        })
+      }
+    }.also(ValueAnimator::start)
+
+    effectAnimator = effectAnimator?.run {
+      removeAllListeners()
+      removeAllUpdateListeners()
+      cancel()
+      null
     }
-    effectAnimator?.removeAllListeners()
-    effectAnimator?.removeAllUpdateListeners()
-    effectAnimator?.cancel()
-    effectAnimator = null
-    shapeAnimator?.start()
   }
 
   fun cleanup() {
-    effectAnimator?.removeAllListeners()
-    effectAnimator?.removeAllUpdateListeners()
-    effectAnimator?.cancel()
-    effectAnimator = null
-    shapeAnimator?.removeAllListeners()
-    shapeAnimator?.removeAllUpdateListeners()
-    shapeAnimator?.cancel()
-    shapeAnimator = null
+    effectAnimator = effectAnimator?.run {
+      removeAllListeners()
+      removeAllUpdateListeners()
+      cancel()
+      null
+    }
+
+    shapeAnimator = shapeAnimator?.run {
+      removeAllListeners()
+      removeAllUpdateListeners()
+      cancel()
+      null
+    }
+
     removeAllViews()
   }
 

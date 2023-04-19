@@ -2,6 +2,7 @@ package com.takusemba.spotlight
 
 import android.graphics.PointF
 import android.view.View
+import androidx.annotation.Px
 import com.takusemba.spotlight.effet.Effect
 import com.takusemba.spotlight.effet.EmptyEffect
 import com.takusemba.spotlight.shape.Circle
@@ -14,7 +15,8 @@ class Target(
     private val deferredAnchor: DeferredAnchor,
     val shape: Shape,
     val effect: Effect,
-    val overlay: View?,
+    val overlay: View,
+    val verticalOffset: Int,
     val listener: OnTargetListener?
 ) {
 
@@ -38,8 +40,9 @@ class Target(
     private var anchor: DeferredAnchor = { DEFAULT_ANCHOR }
     private var shape: Shape = DEFAULT_SHAPE
     private var effect: Effect = DEFAULT_EFFECT
-    private var overlay: View? = null
+    private lateinit var overlay: View
     private var listener: OnTargetListener? = null
+    private var verticalOffset: Int = 0
 
     /**
      * Sets a pointer to start a [Target].
@@ -66,6 +69,10 @@ class Target(
      */
     fun setAnchor(anchor: PointF): Builder = apply {
       this.anchor = { anchor }
+    }
+
+    fun setVerticalOffset(@Px verticalOffset: Int) = apply {
+      this.verticalOffset = verticalOffset
     }
 
     /**
@@ -101,6 +108,7 @@ class Target(
         shape = shape,
         effect = effect,
         overlay = overlay,
+        verticalOffset = verticalOffset,
         listener = listener
     )
 
