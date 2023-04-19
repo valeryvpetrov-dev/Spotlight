@@ -1,6 +1,7 @@
 plugins {
   id("com.android.library")
   id("org.jetbrains.kotlin.android")
+  `maven-publish`
 }
 
 android {
@@ -21,11 +22,23 @@ android {
   }
 }
 
+publishing {
+  publications {
+    register<MavenPublication>("release") {
+      groupId = "se.ingenuity.android"
+      artifactId = "Spotlight"
+      version = "3.0.0-alpha01"
 
+      afterEvaluate {
+        from(components["release"])
+      }
+    }
+  }
+}
 
 dependencies {
   implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.22")
   implementation("androidx.appcompat:appcompat:1.6.1")
 }
 
-apply { from("../publish.gradle") }
+// apply { from("../publish.gradle") }
