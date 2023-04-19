@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.takusemba.spotlight
 
 import android.animation.Animator
@@ -26,7 +28,6 @@ import kotlin.math.roundToInt
 /**
  * [SpotlightView] starts/finishes [Spotlight], and starts/finishes a current [Target].
  */
-@Suppress("DEPRECATION")
 internal class SpotlightView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

@@ -29,7 +29,7 @@ class FragmentSampleFragment : Fragment(R.layout.fragment_fragment_sample) {
           .setShape(Circle(100f))
           .setOverlay(first)
           .setOnTargetListener(object : OnTargetListener {
-            override fun onStarted() {
+            override fun onStarted(index: Int) {
               currentToast?.cancel()
               currentToast = Toast.makeText(
                   requireContext(),
@@ -39,7 +39,7 @@ class FragmentSampleFragment : Fragment(R.layout.fragment_fragment_sample) {
               currentToast?.show()
             }
 
-            override fun onEnded() {
+            override fun onEnded(index: Int) {
               currentToast?.cancel()
               currentToast = Toast.makeText(
                   requireContext(),
@@ -61,7 +61,7 @@ class FragmentSampleFragment : Fragment(R.layout.fragment_fragment_sample) {
           .setShape(Circle(150f))
           .setOverlay(second)
           .setOnTargetListener(object : OnTargetListener {
-            override fun onStarted() {
+            override fun onStarted(index: Int) {
               currentToast?.cancel()
               currentToast = Toast.makeText(
                   requireContext(),
@@ -71,7 +71,7 @@ class FragmentSampleFragment : Fragment(R.layout.fragment_fragment_sample) {
               currentToast?.show()
             }
 
-            override fun onEnded() {
+            override fun onEnded(index: Int) {
               currentToast?.cancel()
               currentToast = Toast.makeText(
                   requireContext(),
@@ -93,7 +93,7 @@ class FragmentSampleFragment : Fragment(R.layout.fragment_fragment_sample) {
           .setShape(Circle(200f))
           .setOverlay(third)
           .setOnTargetListener(object : OnTargetListener {
-            override fun onStarted() {
+            override fun onStarted(index: Int) {
               currentToast?.cancel()
               currentToast = Toast.makeText(
                   requireContext(),
@@ -103,7 +103,7 @@ class FragmentSampleFragment : Fragment(R.layout.fragment_fragment_sample) {
               currentToast?.show()
             }
 
-            override fun onEnded() {
+            override fun onEnded(index: Int) {
               currentToast?.cancel()
               currentToast = Toast.makeText(
                   requireContext(),

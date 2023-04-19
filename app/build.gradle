@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
+  namespace "com.takusemba.spotlightsample"
   compileSdkVersion configs.compileSdkVersion
   defaultConfig {
     minSdkVersion configs.minSdkVersion
