@@ -39,11 +39,9 @@ class Spotlight private constructor(
   init {
     spotlightView.apply {
       if (finishOnTouchOutsideOfCurrentTarget) {
-        setOnTouchOutsideOfCurrentTargetListener(
-            object : OnTouchOutsideOfCurrentTargetListener {
-              override fun onEvent() = finishSpotlight()
-            }
-        )
+        setOnTouchOutsideOfCurrentTargetListener {
+          finishSpotlight()
+        }
       }
 
       if (finishOnBackPress) {
@@ -99,6 +97,10 @@ class Spotlight private constructor(
     finishSpotlight()
   }
 
+  fun invalidateTargetLocation() {
+    spotlightView.invalidateTargetLocation()
+  }
+
   /**
    * Starts Spotlight.
    */
@@ -122,19 +124,21 @@ class Spotlight private constructor(
     if (currentIndex == NO_POSITION) {
       val target = targets[index]
       currentIndex = index
+      target.listener?.onStarting(target, index)
       spotlightView.startTarget(target)
-      target.listener?.onStarted(currentIndex)
+      target.listener?.onStarted(target, index)
     } else {
       spotlightView.finishTarget(object : AnimatorListenerAdapter() {
         override fun onAnimationEnd(animation: Animator) {
           val previousIndex = currentIndex
           val previousTarget = targets[previousIndex]
-          previousTarget.listener?.onEnded(previousIndex)
+          previousTarget.listener?.onEnded(previousTarget, previousIndex)
           if (index < targets.size) {
             val target = targets[index]
             currentIndex = index
+            target.listener?.onStarting(target, index)
             spotlightView.startTarget(target)
-            target.listener?.onStarted(index)
+            target.listener?.onStarted(target, index)
           } else {
             finishSpotlight()
           }

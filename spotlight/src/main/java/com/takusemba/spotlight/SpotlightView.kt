@@ -16,6 +16,7 @@ import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -23,7 +24,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.AbsoluteLayout
 import androidx.annotation.ColorInt
-import kotlin.math.roundToInt
+import androidx.core.view.updateLayoutParams
 
 /**
  * [SpotlightView] starts/finishes [Spotlight], and starts/finishes a current [Target].
@@ -46,7 +47,7 @@ internal class SpotlightView @JvmOverloads constructor(
   private var effectAnimator: ValueAnimator? = null
   private var target: Target? = null
 
-  private var onTouchOutsideOfCurrentTargetListener: OnTouchOutsideOfCurrentTargetListener? = null
+  private var onTouchOutsideOfCurrentTargetListener: (() -> Unit)? = null
 
   init {
     setWillNotDraw(false)
@@ -62,7 +63,7 @@ internal class SpotlightView @JvmOverloads constructor(
     if (currentTarget != null && currentEffectAnimator != null && currentShapeAnimator != null && !currentShapeAnimator.isRunning) {
       currentTarget.effect.draw(
           canvas = canvas,
-          point = currentTarget.anchor,
+          rectangle = currentTarget.windowLocation,
           value = currentEffectAnimator.animatedValue as Float,
           paint = effectPaint
       )
@@ -70,7 +71,7 @@ internal class SpotlightView @JvmOverloads constructor(
     if (currentTarget != null && currentShapeAnimator != null) {
       currentTarget.shape.draw(
           canvas = canvas,
-          point = currentTarget.anchor,
+          rectangle = currentTarget.windowLocation,
           value = currentShapeAnimator.animatedValue as Float,
           paint = shapePaint
       )
@@ -95,7 +96,7 @@ internal class SpotlightView @JvmOverloads constructor(
       MotionEvent.ACTION_DOWN -> {
         val currentTarget = this.target ?: return false
         val touchPoint = PointF(event.x, event.y)
-        if (!currentTarget.contains(touchPoint)) onTouchOutsideOfCurrentTargetListener?.onEvent()
+        if (!currentTarget.contains(touchPoint)) onTouchOutsideOfCurrentTargetListener?.invoke()
         true
       }
 
@@ -147,26 +148,21 @@ internal class SpotlightView @JvmOverloads constructor(
    * Starts the provided [Target].
    */
   fun startTarget(target: Target) {
-    this.target = target.apply {
-      // adjust anchor in case where custom container is set.
-      val location = IntArray(2)
-      getLocationInWindow(location)
-      val offset = PointF(location[0].toFloat(), location[1].toFloat())
-      anchor.offset(-offset.x, -offset.y)
-    }
+    this.target = target
 
     removeAllViews()
+    val localLocation = target.getLocalLocation()
     val childLayoutParams = target.overlay.layoutParams?.let { source ->
       if (source is LayoutParams) {
         source.x = 0
-        source.y = target.anchor.y.roundToInt() + target.verticalOffset
+        source.y = localLocation.bottom + target.verticalOffset
         source
       } else {
         LayoutParams(source.width, source.height, 0,
-            target.anchor.y.roundToInt() + target.verticalOffset)
+            localLocation.bottom + target.verticalOffset)
       }
     } ?: LayoutParams(MATCH_PARENT, WRAP_CONTENT, 0,
-        target.anchor.y.roundToInt() + target.verticalOffset)
+        localLocation.bottom + target.verticalOffset)
 
     addView(target.overlay, childLayoutParams)
 
@@ -277,7 +273,24 @@ internal class SpotlightView @JvmOverloads constructor(
     removeAllViews()
   }
 
-  fun setOnTouchOutsideOfCurrentTargetListener(listener: OnTouchOutsideOfCurrentTargetListener) {
+  fun invalidateTargetLocation() {
+    val currentTarget = target ?: return
+    val localLocation = currentTarget.getLocalLocation()
+
+    currentTarget.overlay.updateLayoutParams<LayoutParams> {
+      y = localLocation.bottom + currentTarget.verticalOffset
+    }
+  }
+
+  fun setOnTouchOutsideOfCurrentTargetListener(listener: () -> Unit) {
     onTouchOutsideOfCurrentTargetListener = listener
+  }
+
+  private fun Target.getLocalLocation(): Rect {
+    // adjust anchor in case where custom container is set.
+    val offset = IntArray(2)
+    getLocationInWindow(offset)
+
+    return windowLocation.apply { offset(-offset[0], -offset[1]) }
   }
 }

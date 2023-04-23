@@ -4,6 +4,7 @@ import android.animation.TimeInterpolator
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PointF
+import android.graphics.Rect
 import android.view.animation.DecelerateInterpolator
 import java.util.concurrent.TimeUnit
 
@@ -16,13 +17,15 @@ class Circle @JvmOverloads constructor(
     override val interpolator: TimeInterpolator = DEFAULT_INTERPOLATOR
 ) : Shape {
 
-  override fun draw(canvas: Canvas, point: PointF, value: Float, paint: Paint) {
-    canvas.drawCircle(point.x, point.y, value * radius, paint)
+  override fun draw(canvas: Canvas, rectangle: Rect, value: Float, paint: Paint) {
+    canvas.drawCircle(rectangle.exactCenterX(), rectangle.exactCenterY(), value * radius, paint)
   }
 
-  override fun contains(anchor: PointF, point: PointF): Boolean {
-    val xNorm = point.x - anchor.x
-    val yNorm = point.y - anchor.y
+  override fun contains(rectangle: Rect, point: PointF): Boolean {
+    val x = rectangle.exactCenterX()
+    val y = rectangle.exactCenterY()
+    val xNorm = point.x - x
+    val yNorm = point.y - y
     return (xNorm * xNorm + yNorm * yNorm) <= radius * radius
   }
 

@@ -4,6 +4,7 @@ import android.animation.TimeInterpolator
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PointF
+import android.graphics.Rect
 import android.graphics.RectF
 import android.view.animation.DecelerateInterpolator
 import java.util.concurrent.TimeUnit
@@ -17,17 +18,18 @@ class RoundedRectangle @JvmOverloads constructor(
     private val height: Float,
     private val width: Float,
     private val radius: Float,
-    override val duration: Long = DEFAULT_DURATION,
-    override val interpolator: TimeInterpolator = DEFAULT_INTERPOLATOR
+    override val duration: Long = TimeUnit.MILLISECONDS.toMillis(500),
+    override val interpolator: TimeInterpolator = DecelerateInterpolator(2f)
 ) : Shape {
-
-  override fun draw(canvas: Canvas, point: PointF, value: Float, paint: Paint) {
+  override fun draw(canvas: Canvas, rectangle: Rect, value: Float, paint: Paint) {
     val halfWidth = width / 2 * value
     val halfHeight = height / 2 * value
-    val left = point.x - halfWidth
-    val top = point.y - halfHeight
-    val right = point.x + halfWidth
-    val bottom = point.y + halfHeight
+    val x = rectangle.exactCenterX()
+    val y = rectangle.exactCenterY()
+    val left = x - halfWidth
+    val top = y - halfHeight
+    val right = x + halfWidth
+    val bottom = y + halfHeight
     val rect = RectF(left, top, right, bottom)
     canvas.drawRoundRect(rect, radius, radius, paint)
   }
@@ -41,21 +43,16 @@ class RoundedRectangle @JvmOverloads constructor(
    * - r = [0; widthHalf], where 0 - rectangle, widthHalf - "smooth" ellipse
    * - n = [2; inf], where 2 - "smooth" ellipse, inf - rectangle
    */
-  override fun contains(anchor: PointF, point: PointF): Boolean {
-    val xNorm = point.x - anchor.x
-    val yNorm = point.y - anchor.y
+  override fun contains(rectangle: Rect, point: PointF): Boolean {
+    val x = rectangle.exactCenterX()
+    val y = rectangle.exactCenterY()
+    val xNorm = point.x - x
+    val yNorm = point.y - y
     val widthHalf = width / 2
     val heightHalf = height / 2
     val r = radius.coerceIn(minimumValue = 0f, maximumValue = widthHalf)
     val n = maxOf(width, height) / r
     return abs((xNorm / widthHalf)).pow(n) + abs((yNorm / heightHalf)).pow(n) <= 1
-  }
-
-  companion object {
-
-    val DEFAULT_DURATION = TimeUnit.MILLISECONDS.toMillis(500)
-
-    val DEFAULT_INTERPOLATOR = DecelerateInterpolator(2f)
   }
 }
 

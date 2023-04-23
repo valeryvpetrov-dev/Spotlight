@@ -32,7 +32,7 @@ class ActivitySampleActivity : AppCompatActivity(R.layout.activity_activity_samp
           .setShape(Circle(100f))
           .setOverlay(first)
           .setOnTargetListener(object : OnTargetListener {
-            override fun onStarted(index: Int) {
+            override fun onStarted(target: Target, index: Int) {
               currentToast?.cancel()
               currentToast = makeText(
                   this@ActivitySampleActivity,
@@ -42,7 +42,7 @@ class ActivitySampleActivity : AppCompatActivity(R.layout.activity_activity_samp
               currentToast?.show()
             }
 
-            override fun onEnded(index: Int) {
+            override fun onEnded(target: Target, index: Int) {
               currentToast?.cancel()
               currentToast = makeText(
                   this@ActivitySampleActivity,
@@ -64,7 +64,7 @@ class ActivitySampleActivity : AppCompatActivity(R.layout.activity_activity_samp
           .setShape(Circle(150f))
           .setOverlay(second)
           .setOnTargetListener(object : OnTargetListener {
-            override fun onStarted(index: Int) {
+            override fun onStarted(target: Target, index: Int) {
               currentToast?.cancel()
               currentToast = makeText(
                   this@ActivitySampleActivity,
@@ -74,7 +74,7 @@ class ActivitySampleActivity : AppCompatActivity(R.layout.activity_activity_samp
               currentToast?.show()
             }
 
-            override fun onEnded(index: Int) {
+            override fun onEnded(target: Target, index: Int) {
               currentToast?.cancel()
               currentToast = makeText(
                   this@ActivitySampleActivity,
@@ -96,7 +96,7 @@ class ActivitySampleActivity : AppCompatActivity(R.layout.activity_activity_samp
           .setShape(Circle(200f))
           .setOverlay(third)
           .setOnTargetListener(object : OnTargetListener {
-            override fun onStarted(index: Int) {
+            override fun onStarted(target: Target, index: Int) {
               currentToast?.cancel()
               currentToast = makeText(
                   this@ActivitySampleActivity,
@@ -106,7 +106,7 @@ class ActivitySampleActivity : AppCompatActivity(R.layout.activity_activity_samp
               currentToast?.show()
             }
 
-            override fun onEnded(index: Int) {
+            override fun onEnded(target: Target, index: Int) {
               currentToast?.cancel()
               currentToast = makeText(
                   this@ActivitySampleActivity,
