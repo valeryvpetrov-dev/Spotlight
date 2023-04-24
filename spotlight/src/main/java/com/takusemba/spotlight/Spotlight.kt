@@ -151,6 +151,8 @@ class Spotlight private constructor(
    * Closes Spotlight.
    */
   private fun finishSpotlight() {
+    if (currentIndex == NO_POSITION) return
+
     spotlightView.finishSpotlight(duration, interpolator, object : AnimatorListenerAdapter() {
       override fun onAnimationEnd(animation: Animator) {
         spotlightView.cleanup()

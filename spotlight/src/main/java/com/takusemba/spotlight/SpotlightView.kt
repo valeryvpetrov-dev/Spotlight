@@ -35,6 +35,8 @@ internal class SpotlightView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
     @ColorInt backgroundColor: Int,
 ) : AbsoluteLayout(context, attrs, defStyleAttr) {
+  private val offsetBuffer = IntArray(2)
+
   private val shapePaint by lazy {
     Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
   }
@@ -60,18 +62,19 @@ internal class SpotlightView @JvmOverloads constructor(
     val currentTarget = target
     val currentShapeAnimator = shapeAnimator
     val currentEffectAnimator = effectAnimator
-    if (currentTarget != null && currentEffectAnimator != null && currentShapeAnimator != null && !currentShapeAnimator.isRunning) {
+    val localLocation = currentTarget?.getLocalLocation() ?: return
+    if (currentEffectAnimator != null && currentShapeAnimator != null && !currentShapeAnimator.isRunning) {
       currentTarget.effect.draw(
           canvas = canvas,
-          rectangle = currentTarget.windowLocation,
+          rectangle = localLocation,
           value = currentEffectAnimator.animatedValue as Float,
           paint = effectPaint
       )
     }
-    if (currentTarget != null && currentShapeAnimator != null) {
+    if (currentShapeAnimator != null) {
       currentTarget.shape.draw(
           canvas = canvas,
-          rectangle = currentTarget.windowLocation,
+          rectangle = localLocation,
           value = currentShapeAnimator.animatedValue as Float,
           paint = shapePaint
       )
@@ -95,8 +98,13 @@ internal class SpotlightView @JvmOverloads constructor(
 
       MotionEvent.ACTION_DOWN -> {
         val currentTarget = this.target ?: return false
-        val touchPoint = PointF(event.x, event.y)
-        if (!currentTarget.contains(touchPoint)) onTouchOutsideOfCurrentTargetListener?.invoke()
+        onTouchOutsideOfCurrentTargetListener?.also {
+          val touchPoint = PointF(event.x, event.y)
+          val localLocation = currentTarget.getLocalLocation()
+          if (!currentTarget.contains(localLocation, touchPoint)) {
+            it.invoke()
+          }
+        }
         true
       }
 
@@ -288,9 +296,8 @@ internal class SpotlightView @JvmOverloads constructor(
 
   private fun Target.getLocalLocation(): Rect {
     // adjust anchor in case where custom container is set.
-    val offset = IntArray(2)
-    getLocationInWindow(offset)
+    getLocationInWindow(offsetBuffer)
 
-    return windowLocation.apply { offset(-offset[0], -offset[1]) }
+    return windowLocation.apply { offset(-offsetBuffer[0], -offsetBuffer[1]) }
   }
 }

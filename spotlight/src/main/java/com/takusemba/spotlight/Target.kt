@@ -28,7 +28,7 @@ class Target private constructor(
    * @param point point to check against contains.
    * @return true if contains, false - otherwise.
    */
-  fun contains(point: PointF): Boolean = shape.contains(windowLocation, point)
+  fun contains(rectangle: Rect, point: PointF): Boolean = shape.contains(rectangle, point)
 
   /**
    * [Builder] to build a [Target].
