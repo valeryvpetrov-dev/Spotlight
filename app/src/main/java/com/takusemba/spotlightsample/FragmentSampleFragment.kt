@@ -121,8 +121,6 @@ class FragmentSampleFragment : Fragment(R.layout.fragment_fragment_sample) {
       val spotlight = Spotlight.Builder(requireActivity())
           .setTargets(targets)
           .setBackgroundColorRes(R.color.spotlightBackground)
-          .setDuration(1000L)
-          .setAnimation(DecelerateInterpolator(2f))
           .setOnSpotlightListener(object : OnSpotlightListener {
             override fun onStarted() {
               currentToast?.cancel()

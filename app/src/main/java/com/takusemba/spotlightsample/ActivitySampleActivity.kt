@@ -124,8 +124,6 @@ class ActivitySampleActivity : AppCompatActivity(R.layout.activity_activity_samp
       val spotlight = Spotlight.Builder(this@ActivitySampleActivity)
           .setTargets(targets)
           .setBackgroundColorRes(R.color.spotlightBackground)
-          .setDuration(1000L)
-          .setAnimation(DecelerateInterpolator(2f))
           .setOnSpotlightListener(object : OnSpotlightListener {
             override fun onStarted() {
               currentToast?.cancel()

@@ -2,18 +2,24 @@ package com.takusemba.spotlight
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
-import android.animation.TimeInterpolator
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.animation.DecelerateInterpolator
 import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
+import androidx.annotation.TransitionRes
 import androidx.core.content.ContextCompat
-import java.util.concurrent.TimeUnit
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.contains
+import androidx.transition.AutoTransition
+import androidx.transition.Transition
+import androidx.transition.TransitionInflater
+import androidx.transition.TransitionManager
+import androidx.transition.doOnEnd
+import androidx.transition.doOnStart
 
 /**
  * Holds all of the [Target]s and [SpotlightView] to show/hide [Target], [SpotlightView] properly.
@@ -26,13 +32,33 @@ import java.util.concurrent.TimeUnit
 class Spotlight private constructor(
     private val spotlightView: SpotlightView,
     private val targets: Array<Target>,
-    private val duration: Long,
-    private val interpolator: TimeInterpolator,
     private val container: ViewGroup,
     private val spotlightListener: OnSpotlightListener?,
     finishOnTouchOutsideOfCurrentTarget: Boolean,
-    finishOnBackPress: Boolean
+    finishOnBackPress: Boolean,
+    enterTransition: Any,
+    exitTransition: Any
 ) {
+  private val enterTransition: Transition by lazy(LazyThreadSafetyMode.NONE) {
+    if (enterTransition is Int && enterTransition != ResourcesCompat.ID_NULL) {
+      TransitionInflater.from(spotlightView.context).inflateTransition(enterTransition)
+    } else if (enterTransition is Transition) {
+      enterTransition
+    } else {
+      AutoTransition()
+    }
+  }
+
+  private val exitTransition: Transition by lazy(LazyThreadSafetyMode.NONE) {
+    if (exitTransition is Int && exitTransition != ResourcesCompat.ID_NULL) {
+      TransitionInflater.from(spotlightView.context).inflateTransition(exitTransition)
+    } else if (exitTransition is Transition) {
+      exitTransition
+    } else {
+      AutoTransition()
+    }
+  }
+
   var currentIndex = NO_POSITION
     private set
 
@@ -55,8 +81,6 @@ class Spotlight private constructor(
         }
       }
     }
-
-    container.addView(spotlightView, MATCH_PARENT, MATCH_PARENT)
   }
 
   /**
@@ -105,16 +129,17 @@ class Spotlight private constructor(
    * Starts Spotlight.
    */
   private fun startSpotlight() {
-    spotlightView.requestFocus()
-    spotlightView.startSpotlight(duration, interpolator, object : AnimatorListenerAdapter() {
-      override fun onAnimationStart(animation: Animator) {
-        spotlightListener?.onStarted()
-      }
+    enterTransition.doOnStart {
+      spotlightListener?.onStarted()
+    }
+    enterTransition.doOnEnd {
+      showTarget(0)
+    }
+    if (spotlightView !in container) {
+      TransitionManager.beginDelayedTransition(container, enterTransition)
 
-      override fun onAnimationEnd(animation: Animator) {
-        showTarget(0)
-      }
-    })
+      container.addView(spotlightView, MATCH_PARENT, MATCH_PARENT)
+    }
   }
 
   /**
@@ -153,14 +178,16 @@ class Spotlight private constructor(
   private fun finishSpotlight() {
     if (currentIndex == NO_POSITION) return
 
-    spotlightView.finishSpotlight(duration, interpolator, object : AnimatorListenerAdapter() {
-      override fun onAnimationEnd(animation: Animator) {
-        spotlightView.cleanup()
-        container.removeView(spotlightView)
-        spotlightListener?.onEnded()
-        currentIndex = NO_POSITION
-      }
-    })
+    exitTransition.doOnEnd {
+      spotlightView.cleanup()
+      spotlightListener?.onEnded()
+      currentIndex = NO_POSITION
+    }
+
+    if (spotlightView in container) {
+      TransitionManager.beginDelayedTransition(container, exitTransition)
+      container.removeView(spotlightView)
+    }
   }
 
   companion object {
@@ -173,10 +200,7 @@ class Spotlight private constructor(
    * All parameters should be set in this [Builder].
    */
   class Builder(private val context: Context) {
-
     private var targets: Array<Target>? = null
-    private var duration: Long = DEFAULT_DURATION
-    private var interpolator: TimeInterpolator = DEFAULT_ANIMATION
 
     @ColorInt
     private var backgroundColor: Int = DEFAULT_OVERLAY_COLOR
@@ -185,8 +209,10 @@ class Spotlight private constructor(
 
     // Finish on touch outside of current target feature is disabled by default
     private var finishOnTouchOutsideOfCurrentTarget: Boolean = false
-
     private var finishOnBackPress: Boolean = false
+
+    private var enterTransition: Any = AutoTransition()
+    private var exitTransition: Any = enterTransition
 
     /**
      * Sets [Target]s to show on [Spotlight].
@@ -205,13 +231,6 @@ class Spotlight private constructor(
     }
 
     /**
-     * Sets [duration] to start/finish [Spotlight].
-     */
-    fun setDuration(duration: Long): Builder = apply {
-      this.duration = duration
-    }
-
-    /**
      * Sets [backgroundColor] resource on [Spotlight].
      */
     fun setBackgroundColorRes(@ColorRes backgroundColorRes: Int): Builder = apply {
@@ -223,13 +242,6 @@ class Spotlight private constructor(
      */
     fun setBackgroundColor(@ColorInt backgroundColor: Int): Builder = apply {
       this.backgroundColor = backgroundColor
-    }
-
-    /**
-     * Sets [interpolator] to start/finish [Spotlight].
-     */
-    fun setAnimation(interpolator: TimeInterpolator): Builder = apply {
-      this.interpolator = interpolator
     }
 
     /**
@@ -252,12 +264,28 @@ class Spotlight private constructor(
      */
     fun setFinishOnTouchOutsideOfCurrentTarget(
         finishOnTouchOutsideOfCurrentTarget: Boolean
-    ): Builder = apply {
+    ) = apply {
       this.finishOnTouchOutsideOfCurrentTarget = finishOnTouchOutsideOfCurrentTarget
     }
 
-    fun setFinishOnBackPress(finishOnBackPress: Boolean): Builder = apply {
+    fun setFinishOnBackPress(finishOnBackPress: Boolean) = apply {
       this.finishOnBackPress = finishOnBackPress
+    }
+
+    fun setEnterTransition(enterTransition: Any) = apply {
+      this.enterTransition = enterTransition
+    }
+
+    fun setEnterTransition(@TransitionRes enterTransition: Int) = apply {
+      this.enterTransition = enterTransition
+    }
+
+    fun setExitTransition(exitTransition: Any) = apply {
+      this.exitTransition = exitTransition
+    }
+
+    fun setExitTransition(@TransitionRes exitTransition: Int) = apply {
+      this.exitTransition = exitTransition
     }
 
     fun build(): Spotlight {
@@ -267,21 +295,16 @@ class Spotlight private constructor(
       return Spotlight(
           spotlightView = spotlightView,
           targets = targets,
-          duration = duration,
-          interpolator = interpolator,
           container = container,
           spotlightListener = listener,
           finishOnTouchOutsideOfCurrentTarget,
-          finishOnBackPress
+          finishOnBackPress,
+          enterTransition,
+          exitTransition
       )
     }
 
     companion object {
-
-      private val DEFAULT_DURATION = TimeUnit.SECONDS.toMillis(1)
-
-      private val DEFAULT_ANIMATION = DecelerateInterpolator(2f)
-
       @ColorInt
       private val DEFAULT_OVERLAY_COLOR: Int = 0x6000000
 

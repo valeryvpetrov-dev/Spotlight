@@ -13,8 +13,8 @@ import java.util.concurrent.TimeUnit
  */
 class Circle @JvmOverloads constructor(
     private val radius: Float,
-    override val duration: Long = DEFAULT_DURATION,
-    override val interpolator: TimeInterpolator = DEFAULT_INTERPOLATOR
+    override val duration: Long = TimeUnit.MILLISECONDS.toMillis(500),
+    override val interpolator: TimeInterpolator = DecelerateInterpolator(2f)
 ) : Shape {
 
   override fun draw(canvas: Canvas, rectangle: Rect, value: Float, paint: Paint) {
@@ -27,12 +27,5 @@ class Circle @JvmOverloads constructor(
     val xNorm = point.x - x
     val yNorm = point.y - y
     return (xNorm * xNorm + yNorm * yNorm) <= radius * radius
-  }
-
-  companion object {
-
-    val DEFAULT_DURATION = TimeUnit.MILLISECONDS.toMillis(500)
-
-    val DEFAULT_INTERPOLATOR = DecelerateInterpolator(2f)
   }
 }

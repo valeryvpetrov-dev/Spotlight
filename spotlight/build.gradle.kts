@@ -39,6 +39,7 @@ publishing {
 dependencies {
   implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.22")
   implementation("androidx.appcompat:appcompat:1.6.1")
+  implementation("androidx.transition:transition-ktx:1.4.1")
 }
 
 // apply { from("../publish.gradle") }

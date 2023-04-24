@@ -4,8 +4,6 @@ package com.takusemba.spotlight
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
-import android.animation.ObjectAnimator
-import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.animation.ValueAnimator.AnimatorUpdateListener
 import android.animation.ValueAnimator.INFINITE
@@ -118,38 +116,6 @@ internal class SpotlightView @JvmOverloads constructor(
     super.performClick()
     // Handle the action for the custom click here
     return true
-  }
-
-  /**
-   * Starts [Spotlight].
-   */
-  fun startSpotlight(
-      duration: Long,
-      interpolator: TimeInterpolator,
-      listener: Animator.AnimatorListener
-  ) {
-    val objectAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, 0f, 1f).apply {
-      setDuration(duration)
-      setInterpolator(interpolator)
-      addListener(listener)
-    }
-    objectAnimator.start()
-  }
-
-  /**
-   * Finishes [Spotlight].
-   */
-  fun finishSpotlight(
-      duration: Long,
-      interpolator: TimeInterpolator,
-      listener: Animator.AnimatorListener
-  ) {
-    val objectAnimator = ObjectAnimator.ofFloat(this, View.ALPHA, 1f, 0f).apply {
-      setDuration(duration)
-      setInterpolator(interpolator)
-      addListener(listener)
-    }
-    objectAnimator.start()
   }
 
   /**
