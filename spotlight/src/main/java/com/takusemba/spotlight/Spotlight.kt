@@ -13,13 +13,14 @@ import androidx.annotation.ColorRes
 import androidx.annotation.TransitionRes
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.contains
 import androidx.transition.AutoTransition
 import androidx.transition.Transition
 import androidx.transition.TransitionInflater
 import androidx.transition.TransitionManager
-import androidx.transition.doOnEnd
-import androidx.transition.doOnStart
+import com.takusemba.spotlight.transition.doOnceOnEnd
+import com.takusemba.spotlight.transition.doOnceOnStart
 
 /**
  * Holds all of the [Target]s and [SpotlightView] to show/hide [Target], [SpotlightView] properly.
@@ -39,6 +40,9 @@ class Spotlight private constructor(
     enterTransition: Any,
     exitTransition: Any
 ) {
+  var currentIndex = NO_POSITION
+    private set
+
   private val enterTransition: Transition by lazy(LazyThreadSafetyMode.NONE) {
     if (enterTransition is Int && enterTransition != ResourcesCompat.ID_NULL) {
       TransitionInflater.from(spotlightView.context).inflateTransition(enterTransition)
@@ -59,8 +63,8 @@ class Spotlight private constructor(
     }
   }
 
-  var currentIndex = NO_POSITION
-    private set
+  private var pendingStart = false
+  private var pendingFinish = false
 
   init {
     spotlightView.apply {
@@ -129,16 +133,25 @@ class Spotlight private constructor(
    * Starts Spotlight.
    */
   private fun startSpotlight() {
-    enterTransition.doOnStart {
-      spotlightListener?.onStarted()
-    }
-    enterTransition.doOnEnd {
-      showTarget(0)
-    }
-    if (spotlightView !in container) {
-      TransitionManager.beginDelayedTransition(container, enterTransition)
+    if (pendingStart) return
+    pendingStart = true
 
-      container.addView(spotlightView, MATCH_PARENT, MATCH_PARENT)
+    ViewCompat.postOnAnimation(container) {
+      enterTransition.doOnceOnStart {
+        spotlightListener?.onStarted()
+      }
+
+      enterTransition.doOnceOnEnd {
+        showTarget(0)
+        spotlightView.requestFocus()
+        pendingStart = false
+      }
+
+      if (spotlightView !in container) {
+        TransitionManager.beginDelayedTransition(container, enterTransition)
+
+        container.addView(spotlightView, MATCH_PARENT, MATCH_PARENT)
+      }
     }
   }
 
@@ -176,17 +189,21 @@ class Spotlight private constructor(
    * Closes Spotlight.
    */
   private fun finishSpotlight() {
-    if (currentIndex == NO_POSITION) return
+    if (pendingFinish) return
+    pendingFinish = true
 
-    exitTransition.doOnEnd {
-      spotlightView.cleanup()
-      spotlightListener?.onEnded()
-      currentIndex = NO_POSITION
-    }
+    ViewCompat.postOnAnimation(container) {
+      exitTransition.doOnceOnEnd {
+        spotlightView.cleanup()
+        spotlightListener?.onEnded()
+        currentIndex = NO_POSITION
+        pendingFinish = false
+      }
 
-    if (spotlightView in container) {
-      TransitionManager.beginDelayedTransition(container, exitTransition)
-      container.removeView(spotlightView)
+      if (spotlightView in container) {
+        TransitionManager.beginDelayedTransition(container, exitTransition)
+        container.removeView(spotlightView)
+      }
     }
   }
 
@@ -212,7 +229,7 @@ class Spotlight private constructor(
     private var finishOnBackPress: Boolean = false
 
     private var enterTransition: Any = AutoTransition()
-    private var exitTransition: Any = enterTransition
+    private var exitTransition: Any = AutoTransition()
 
     /**
      * Sets [Target]s to show on [Spotlight].
