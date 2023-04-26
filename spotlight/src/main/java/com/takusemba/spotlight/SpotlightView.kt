@@ -23,6 +23,8 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.AbsoluteLayout
 import androidx.annotation.ColorInt
 import androidx.core.view.updateLayoutParams
+import androidx.transition.Transition
+import androidx.transition.TransitionManager
 
 /**
  * [SpotlightView] starts/finishes [Spotlight], and starts/finishes a current [Target].
@@ -121,10 +123,20 @@ internal class SpotlightView @JvmOverloads constructor(
   /**
    * Starts the provided [Target].
    */
-  fun startTarget(target: Target) {
+  fun startTarget(
+      target: Target,
+      targetEnterTransition: Transition,
+      targetExitTransition: Transition?
+  ) {
     this.target = target
 
-    removeAllViews()
+    if (childCount > 0) {
+      if (targetExitTransition != null) {
+        TransitionManager.beginDelayedTransition(this, targetExitTransition)
+      }
+      removeAllViews()
+    }
+
     val localLocation = target.getLocalLocation()
     val childLayoutParams = target.overlay.layoutParams?.let { source ->
       if (source is LayoutParams) {
@@ -138,6 +150,7 @@ internal class SpotlightView @JvmOverloads constructor(
     } ?: LayoutParams(MATCH_PARENT, WRAP_CONTENT, 0,
         localLocation.bottom + target.verticalOffset)
 
+    TransitionManager.beginDelayedTransition(this, targetEnterTransition)
     addView(target.overlay, childLayoutParams)
 
     shapeAnimator = shapeAnimator?.apply {

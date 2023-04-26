@@ -4,6 +4,8 @@ import android.graphics.PointF
 import android.graphics.Rect
 import android.view.View
 import androidx.annotation.Px
+import androidx.annotation.TransitionRes
+import androidx.transition.Transition
 import com.takusemba.spotlight.effect.Effect
 import com.takusemba.spotlight.shape.Circle
 import com.takusemba.spotlight.shape.Shape
@@ -15,6 +17,8 @@ class Target private constructor(
     internal val shape: Shape,
     internal val effect: Effect,
     internal val overlay: View,
+    internal val enterTransition: Any?,
+    internal val exitTransition: Any?,
     @Px internal val verticalOffset: Int,
     private val windowLocationProvider: () -> Rect,
     internal val listener: OnTargetListener?
@@ -41,6 +45,9 @@ class Target private constructor(
     private var effect: Effect? = null
     private lateinit var overlay: View
     private var listener: OnTargetListener? = null
+
+    private var enterTransition: Any? = null
+    private var exitTransition: Any? = null
 
     @Px
     private var verticalOffset: Int = 0
@@ -83,6 +90,22 @@ class Target private constructor(
      */
     fun setOverlay(overlay: View): Builder = apply { this.overlay = overlay }
 
+    fun setEnterTransition(enterTransition: Transition) = apply {
+      this.enterTransition = enterTransition
+    }
+
+    fun setEnterTransition(@TransitionRes enterTransition: Int) = apply {
+      this.enterTransition = enterTransition
+    }
+
+    fun setExitTransition(exitTransition: Transition) = apply {
+      this.exitTransition = exitTransition
+    }
+
+    fun setExitTransition(@TransitionRes exitTransition: Int) = apply {
+      this.exitTransition = exitTransition
+    }
+
     /**
      * Sets [OnTargetListener] to notify the state of [Target].
      */
@@ -97,6 +120,8 @@ class Target private constructor(
         shape = shape ?: Circle(100f),
         effect = effect ?: Effect.None(),
         overlay = overlay,
+        enterTransition = enterTransition,
+        exitTransition = exitTransition,
         verticalOffset = verticalOffset,
         listener = listener
     )

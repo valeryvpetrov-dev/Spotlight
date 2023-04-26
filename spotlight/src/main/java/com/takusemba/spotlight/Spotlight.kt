@@ -37,30 +37,22 @@ class Spotlight private constructor(
     private val spotlightListener: OnSpotlightListener?,
     finishOnTouchOutsideOfCurrentTarget: Boolean,
     finishOnBackPress: Boolean,
-    enterTransition: Any,
-    exitTransition: Any
+    enterTransition: Any?,
+    exitTransition: Any?
 ) {
   var currentIndex = NO_POSITION
     private set
 
+  private val transitionInflater by lazy(LazyThreadSafetyMode.NONE) {
+    TransitionInflater.from(spotlightView.context)
+  }
+
   private val enterTransition: Transition by lazy(LazyThreadSafetyMode.NONE) {
-    if (enterTransition is Int && enterTransition != ResourcesCompat.ID_NULL) {
-      TransitionInflater.from(spotlightView.context).inflateTransition(enterTransition)
-    } else if (enterTransition is Transition) {
-      enterTransition
-    } else {
-      AutoTransition()
-    }
+    enterTransition.asTransition { DEFAULT__SPOTLIGHT_TRANSITION.clone() }
   }
 
   private val exitTransition: Transition by lazy(LazyThreadSafetyMode.NONE) {
-    if (exitTransition is Int && exitTransition != ResourcesCompat.ID_NULL) {
-      TransitionInflater.from(spotlightView.context).inflateTransition(exitTransition)
-    } else if (exitTransition is Transition) {
-      exitTransition
-    } else {
-      AutoTransition()
-    }
+    exitTransition.asTransition { DEFAULT__SPOTLIGHT_TRANSITION.clone() }
   }
 
   private var pendingStart = false
@@ -160,11 +152,7 @@ class Spotlight private constructor(
    */
   private fun showTarget(index: Int) {
     if (currentIndex == NO_POSITION) {
-      val target = targets[index]
-      currentIndex = index
-      target.listener?.onStarting(target, index)
-      spotlightView.startTarget(target)
-      target.listener?.onStarted(target, index)
+      enterTarget(index)
     } else {
       spotlightView.finishTarget(object : AnimatorListenerAdapter() {
         override fun onAnimationEnd(animation: Animator) {
@@ -172,17 +160,30 @@ class Spotlight private constructor(
           val previousTarget = targets[previousIndex]
           previousTarget.listener?.onEnded(previousTarget, previousIndex)
           if (index < targets.size) {
-            val target = targets[index]
-            currentIndex = index
-            target.listener?.onStarting(target, index)
-            spotlightView.startTarget(target)
-            target.listener?.onStarted(target, index)
+            enterTarget(index)
           } else {
             finishSpotlight()
           }
         }
       })
     }
+  }
+
+  private fun enterTarget(index: Int) {
+    val target = targets[index]
+    val resolvedEnterTransition = target.enterTransition
+        .asTransition { DEFAULT__TARGET_TRANSITION.clone() }
+        .doOnceOnStart { target.listener?.onStarting(target, index) }
+        .doOnceOnEnd {
+          currentIndex = index
+          target.listener?.onStarted(target, index)
+        }
+
+    val previousTarget = targets.getOrNull(currentIndex)
+    val resolvedExitTransition = previousTarget?.exitTransition
+        ?.asTransition { DEFAULT__TARGET_TRANSITION.clone() }
+
+    spotlightView.startTarget(target, resolvedEnterTransition, resolvedExitTransition)
   }
 
   /**
@@ -207,7 +208,20 @@ class Spotlight private constructor(
     }
   }
 
+  private inline fun Any?.asTransition(default: () -> Transition): Transition {
+    val receiver = this
+    return if (receiver is Int && receiver != ResourcesCompat.ID_NULL) {
+      transitionInflater.runCatching { inflateTransition(receiver) }.getOrElse { default() }
+    } else if (receiver is Transition) {
+      receiver
+    } else {
+      default()
+    }
+  }
+
   companion object {
+    private val DEFAULT__SPOTLIGHT_TRANSITION = AutoTransition()
+    private val DEFAULT__TARGET_TRANSITION = DEFAULT__SPOTLIGHT_TRANSITION
 
     const val NO_POSITION = -1
   }
@@ -228,8 +242,8 @@ class Spotlight private constructor(
     private var finishOnTouchOutsideOfCurrentTarget: Boolean = false
     private var finishOnBackPress: Boolean = false
 
-    private var enterTransition: Any = AutoTransition()
-    private var exitTransition: Any = AutoTransition()
+    private var enterTransition: Any? = null
+    private var exitTransition: Any? = null
 
     /**
      * Sets [Target]s to show on [Spotlight].
@@ -289,7 +303,7 @@ class Spotlight private constructor(
       this.finishOnBackPress = finishOnBackPress
     }
 
-    fun setEnterTransition(enterTransition: Any) = apply {
+    fun setEnterTransition(enterTransition: Transition) = apply {
       this.enterTransition = enterTransition
     }
 
@@ -297,7 +311,7 @@ class Spotlight private constructor(
       this.enterTransition = enterTransition
     }
 
-    fun setExitTransition(exitTransition: Any) = apply {
+    fun setExitTransition(exitTransition: Transition) = apply {
       this.exitTransition = exitTransition
     }
 
